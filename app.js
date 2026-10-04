@@ -1,5 +1,5 @@
 /* Modul Ajar AI • GitHub Pages frontend. Set API_URL to your Apps Script Web App URL. */
-const API_URL = localStorage.getItem('MODUL_AJAR_API') || 'PASTE_APPS_SCRIPT_WEB_APP_URL_HERE';
+const API_URL = localStorage.getItem('MODUL_AJAR_API') || 'https://script.google.com/macros/s/AKfycbwyd66NfVG5_TvbNTt88ixZrDH2kP5wfjXcVyyna9JdEV-bSzOXHQsTEtOCxEvrKYCP/exec';
 let state={user:null,profile:null,module:null,result:null,payment:null};
 const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
 function showScreen(id){$$('.screen').forEach(x=>x.classList.remove('active'));$('#'+id)?.classList.add('active');window.scrollTo({top:0,behavior:'smooth'});}
