@@ -1,10 +1,47 @@
 /* Modul Ajar AI • GitHub Pages frontend. Set API_URL to your Apps Script Web App URL. */
-const API_URL = localStorage.getItem('MODUL_AJAR_API') || 'https://script.google.com/macros/s/AKfycbwyd66NfVG5_TvbNTt88ixZrDH2kP5wfjXcVyyna9JdEV-bSzOXHQsTEtOCxEvrKYCP/exec';
+const API_URL = 'https://script.google.com/macros/s/AKfycbwyd66NfVG5_TvbNTt88ixZrDH2kP5wfjXcVyyna9JdEV-bSzOXHQsTEtOCxEvrKYCP/exec';
 let state={user:null,profile:null,module:null,result:null,payment:null};
 const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
 function showScreen(id){$$('.screen').forEach(x=>x.classList.remove('active'));$('#'+id)?.classList.add('active');window.scrollTo({top:0,behavior:'smooth'});}
 function setMsg(id,text,type=''){const el=$('#'+id);if(!el)return;el.textContent=text;el.className='msg '+type}
-async function api(action,payload={}){if(API_URL.includes('PASTE_'))throw new Error('API_URL belum diisi di app.js');const r=await fetch(API_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({action,...payload})});const d=await r.json();if(!d.ok)throw new Error(d.error||'Terjadi kesalahan');return d}
+async function api(action,payload={}) {
+  if (!API_URL || API_URL.includes('PASTE_')) {
+    throw new Error('API_URL belum diisi di app.js');
+  }
+
+  try {
+    const r = await fetch(API_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'text/plain;charset=utf-8'
+      },
+      body: JSON.stringify({
+        action,
+        ...payload
+      })
+    });
+
+    const text = await r.text();
+
+    let d;
+    try {
+      d = JSON.parse(text);
+    } catch (e) {
+      throw new Error(
+        'Respons server bukan JSON. Pastikan Apps Script sudah di-deploy sebagai Web App (/exec).'
+      );
+    }
+
+    if (!d.ok) {
+      throw new Error(d.error || 'Terjadi kesalahan pada server.');
+    }
+
+    return d;
+
+  } catch (err) {
+    throw new Error(err.message || 'Gagal terhubung ke server.');
+  }
+}
 function phaseFor(g){return ['1','2'].includes(String(g))?'A':['3','4'].includes(String(g))?'B':'C'}
 function money(n){return 'Rp '+Number(n||0).toLocaleString('id-ID')}
 function renderUser(){if(state.user)$('#userBadge').textContent=state.user.name+' • '+(state.user.premium?'PREMIUM':'BELUM PREMIUM')}
