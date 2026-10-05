@@ -113,7 +113,7 @@ async function loadProfile() {
     token: token
   });
 
-  // Pertahankan token sesi agar tidak hilang
+  // Pertahankan token yang dibuat saat login
   state.user = {
     ...(state.user || {}),
     ...(d.user || {}),
@@ -127,11 +127,40 @@ async function loadProfile() {
     JSON.stringify(state.user)
   );
 
-  console.log('loadProfile selesai. Token tersedia:', !!state.user.token);
+  // Isi form profil langsung di sini
+  const f = $('#profileForm');
 
-  fillProfile();
+  if (f) {
+    Object.entries(state.profile || {}).forEach(([k, v]) => {
+      const el = f.elements[k];
+
+      if (el) {
+        el.value = v || '';
+      }
+    });
+
+    const teacherName = $('#teacherName');
+
+    if (teacherName) {
+      teacherName.value =
+        state.user.name ||
+        state.profile.teacherName ||
+        '';
+    }
+
+    const phase = f.elements.phase;
+    const grade = f.elements.grade;
+
+    if (phase && grade) {
+      phase.value = phaseFor(grade.value);
+    }
+  }
+
+  console.log(
+    'Profil berhasil dimuat. Token tersedia:',
+    !!state.user.token
+  );
 }
-
 
 function fillProfile() {
   const f = $('#profileForm');
