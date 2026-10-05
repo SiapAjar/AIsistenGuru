@@ -53,9 +53,82 @@ async function loadProfile(){const d=await api('me',{token:state.user.token});st
 function fillProfile(){const f=$('#profileForm');Object.entries(state.profile||{}).forEach(([k,v])=>{const el=f.elements[k];if(el)el.value=v||''});$('#teacherName').value=state.user.name||state.profile.teacherName||'';$('#profileForm [name=phase]').value=phaseFor(f.elements.grade.value)}
 $('#profileForm').addEventListener('submit',async e=>{e.preventDefault();try{const p=Object.fromEntries(new FormData(e.target));p.teacherName=state.user.name;state.profile=p;await api('saveProfile',{token:state.user.token,profile:p});fillModule();showScreen('module')}catch(err){alert(err.message)}});
 function fillModule(){const p=state.profile;[['mSchool','school'],['mTeacher','teacherName'],['mTeacherNip','teacherNip'],['mPrincipal','principalName'],['mPrincipalNip','principalNip'],['mSign','signPlaceDate'],['mGrade','grade']].forEach(([id,k])=>$('#'+id).value=p[k]||'');$('#moduleCP').value=p.cp||''}
-async function getCP(fromModule=false){const p=state.profile||Object.fromEntries(new FormData($('#profileForm')));if(!p.grade||!p.subject){alert('Isi mata pelajaran dan kelas dahulu.');return}try{const d=await api('getCP',{token:state.user?.token,subject:p.subject,grade:p.grade,phase:phaseFor(p.grade),abbr:p.abbr});if(fromModule)$('#moduleCP').value=d.cp;else{$('#cp').value=d.cp;$('#cpSource').textContent=d.source||'';state.profile.cp=d.cp}}catch(e){alert(e.message)}}
-$('#pedagogy').addEventListener('change',e=>$('#otherPedagogyWrap').classList.toggle('hidden',e.target.value!=='Lainnya'));
-async function suggestTP(){const f=Object.fromEntries(new FormData($('#moduleForm')));try{const d=await api('suggestTP',{token:state.user.token,profile:state.profile,module:f});$('#tp').value=d.tp}catch(e){alert(e.message)}}
+async function getCP(fromModule = false) {
+  try {
+    // Selalu ambil data terbaru dari form
+    const formData = Object.fromEntries(
+      new FormData($('#profileForm'))
+    );
+
+    // Gabungkan dengan state.profile jika ada
+    const p = {
+      ...(state.profile || {}),
+      ...formData
+    };
+
+    // Bersihkan nilai
+    const subject = String(p.subject || '').trim();
+    const grade = String(p.grade || '').trim();
+    const abbr = String(p.abbr || '').trim();
+
+    // Validasi
+    if (!subject || !grade) {
+      alert('Isi mata pelajaran dan kelas dahulu.');
+      return;
+    }
+
+    // Tentukan fase berdasarkan kelas
+    const phase = phaseFor(grade);
+
+    console.log('Data CP yang dikirim:', {
+      subject: subject,
+      grade: grade,
+      phase: phase,
+      abbr: abbr
+    });
+
+    // Panggil backend
+    const d = await api('getCP', {
+      token: state.user?.token,
+      subject: subject,
+      grade: grade,
+      phase: phase,
+      abbr: abbr
+    });
+
+    // Pastikan CP ada
+    if (!d.cp) {
+      throw new Error('CP tidak ditemukan dari server.');
+    }
+
+    // Jika dipanggil dari Modul Ajar
+    if (fromModule) {
+      $('#moduleCP').value = d.cp;
+    } else {
+      // Jika dari form utama
+      $('#cp').value = d.cp;
+
+      if ($('#cpSource')) {
+        $('#cpSource').textContent = d.source || '';
+      }
+
+      // Simpan data terbaru
+      state.profile = {
+        ...(state.profile || {}),
+        ...formData,
+        subject: subject,
+        grade: grade,
+        abbr: abbr,
+        phase: phase,
+        cp: d.cp
+      };
+    }
+
+  } catch (e) {
+    console.error('getCP error:', e);
+    alert(e.message || 'Gagal mengambil CP.');
+  }
+}
 $('#moduleForm').addEventListener('submit',async e=>{e.preventDefault();const f=Object.fromEntries(new FormData(e.target));f.dimensions=$$('#dimensions input:checked').map(x=>x.value);if(f.pedagogy==='Lainnya')f.pedagogy=f.otherPedagogy||'Pendekatan lain';state.module=f;const btn=e.target.querySelector('button[type=submit]');btn.disabled=true;btn.textContent='AI sedang menyusun...';try{const d=await api('generateDocuments',{token:state.user.token,profile:state.profile,module:f});state.result=d.result;renderResult();showScreen('result')}catch(err){alert(err.message)}finally{btn.disabled=false;btn.textContent='🚀 Buat Modul Ajar dengan AI'}});
 function esc(s){return String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]))}
 function md(s){return esc(s).replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>').replace(/^### (.*)$/gm,'<h3>$1</h3>').replace(/^## (.*)$/gm,'<h2>$1</h2>').replace(/^# (.*)$/gm,'<h1>$1</h1>').replace(/\n/g,'<br>')}
