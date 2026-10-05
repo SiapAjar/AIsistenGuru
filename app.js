@@ -113,7 +113,7 @@ async function loadProfile() {
     token: token
   });
 
-  // Jangan sampai token sesi hilang saat user diperbarui
+  // Pertahankan token sesi agar tidak hilang
   state.user = {
     ...(state.user || {}),
     ...(d.user || {}),
@@ -127,9 +127,43 @@ async function loadProfile() {
     JSON.stringify(state.user)
   );
 
-  console.log('loadProfile selesai. Token masih tersedia:', !!state.user.token);
+  console.log('loadProfile selesai. Token tersedia:', !!state.user.token);
 
   fillProfile();
+}
+
+
+function fillProfile() {
+  const f = $('#profileForm');
+
+  if (!f) {
+    console.error('Form profileForm tidak ditemukan.');
+    return;
+  }
+
+  Object.entries(state.profile || {}).forEach(([k, v]) => {
+    const el = f.elements[k];
+
+    if (el) {
+      el.value = v || '';
+    }
+  });
+
+  const teacherName = $('#teacherName');
+
+  if (teacherName) {
+    teacherName.value =
+      state.user.name ||
+      state.profile.teacherName ||
+      '';
+  }
+
+  const phase = f.elements.phase;
+  const grade = f.elements.grade;
+
+  if (phase && grade) {
+    phase.value = phaseFor(grade.value);
+  }
 }
 $('#moduleForm').addEventListener('submit',async e=>{e.preventDefault();const f=Object.fromEntries(new FormData(e.target));f.dimensions=$$('#dimensions input:checked').map(x=>x.value);if(f.pedagogy==='Lainnya')f.pedagogy=f.otherPedagogy||'Pendekatan lain';state.module=f;const btn=e.target.querySelector('button[type=submit]');btn.disabled=true;btn.textContent='AI sedang menyusun...';try{const d=await api('generateDocuments',{token:state.user.token,profile:state.profile,module:f});state.result=d.result;renderResult();showScreen('result')}catch(err){alert(err.message)}finally{btn.disabled=false;btn.textContent='🚀 Buat Modul Ajar dengan AI'}});
 function esc(s){return String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]))}
