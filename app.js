@@ -47,8 +47,61 @@ function money(n){return 'Rp '+Number(n||0).toLocaleString('id-ID')}
 function renderUser(){if(state.user)$('#userBadge').textContent=state.user.name+' • '+(state.user.premium?'PREMIUM':'BELUM PREMIUM')}
 function setupPaymentScreen(summary,user,paymentToken){state.payment=summary||null;if(paymentToken)sessionStorage.setItem('payment_token',paymentToken);sessionStorage.setItem('payment_user',JSON.stringify(user||{}));$('#payName').value=user?.name||'';$('#payEmail').value=user?.email||'';$('#payNip').value=state.profile?.teacherNip||'';$('#payBase').textContent=money(summary?.basePrice);$('#payCode').textContent=money(summary?.uniqueCode);$('#payTotal').textContent=money(summary?.totalAmount);$('#payExpiry').textContent=summary?.expiresAt?'Kode berlaku sampai '+new Date(summary.expiresAt).toLocaleString('id-ID'):'';showScreen('payment')}
 $('#profileForm').addEventListener('input',e=>{if(e.target.name==='grade')$('#profileForm [name=phase]').value=phaseFor(e.target.value)});
-$('#loginForm').addEventListener('submit',async e=>{e.preventDefault();setMsg('loginMsg','Memeriksa...');try{const d=await api('login',Object.fromEntries(new FormData(e.target)));state.user=d.user;localStorage.setItem('ma_user',JSON.stringify(state.user));renderUser();if(d.user.role==='admin')return loadAdmin();if(!d.user.premium){if(d.user.status==='payment_review'){setMsg('loginMsg','Pembayaran sedang diperiksa admin. Silakan tunggu persetujuan.','success');return}setupPaymentScreen(d.paymentSummary,d.user,d.paymentToken);return}await loadProfile();showScreen('dashboard')}catch(err){setMsg('loginMsg',err.message,'error')}});
-$('#registerForm').addEventListener('submit',async e=>{e.preventDefault();const data=Object.fromEntries(new FormData(e.target));if(data.password.length<10){setMsg('registerMsg','Password minimal 10 karakter.','error');return}setMsg('registerMsg','Mengirim...');try{await api('register',data);setMsg('registerMsg','Pendaftaran berhasil. Silakan cek email untuk verifikasi.','success');e.target.reset()}catch(err){setMsg('registerMsg',err.message,'error')}});
+$('#loginForm').addEventListener('submit', async e => {
+  e.preventDefault();
+
+  setMsg('loginMsg', 'Memeriksa...');
+
+  try {
+    const d = await api(
+      'login',
+      Object.fromEntries(new FormData(e.target))
+    );
+
+    // Simpan user + token sesi
+    state.user = {
+      ...(d.user || {}),
+      token: d.token || d.user?.token || ''
+    };
+
+    // Simpan ke localStorage
+    localStorage.setItem('ma_user', JSON.stringify(state.user));
+
+    console.log('Login berhasil. Token tersedia:', !!state.user.token);
+
+    renderUser();
+
+    if (state.user.role === 'admin') {
+      return loadAdmin();
+    }
+
+    if (!state.user.premium) {
+      if (state.user.status === 'payment_review') {
+        setMsg(
+          'loginMsg',
+          'Pembayaran sedang diperiksa admin. Silakan tunggu persetujuan.',
+          'success'
+        );
+        return;
+      }
+
+      setupPaymentScreen(
+        d.paymentSummary,
+        state.user,
+        d.paymentToken
+      );
+
+      return;
+    }
+
+    await loadProfile();
+    showScreen('dashboard');
+
+  } catch (err) {
+    console.error('Login error:', err);
+    setMsg('loginMsg', err.message, 'error');
+  }
+});
 async function loadProfile(){const d=await api('me',{token:state.user.token});state.user=d.user;state.profile=d.profile||{};localStorage.setItem('ma_user',JSON.stringify(state.user));fillProfile()}
 function fillProfile(){const f=$('#profileForm');Object.entries(state.profile||{}).forEach(([k,v])=>{const el=f.elements[k];if(el)el.value=v||''});$('#teacherName').value=state.user.name||state.profile.teacherName||'';$('#profileForm [name=phase]').value=phaseFor(f.elements.grade.value)}
 $('#profileForm').addEventListener('submit',async e=>{e.preventDefault();try{const p=Object.fromEntries(new FormData(e.target));p.teacherName=state.user.name;state.profile=p;await api('saveProfile',{token:state.user.token,profile:p});fillModule();showScreen('module')}catch(err){alert(err.message)}});
